@@ -1,0 +1,62 @@
+---
+# Functional checks from the post. Run after site.yml:
+#   ansible-playbook tests/verify.yml
+- name: Verify DNS over TLS and the DoT forwarders
+  hosts: dot_servers
+  gather_facts: false
+  become: true
+  vars:
+    verify_upstreams: "208.67.222.222|208.67.220.220|1.1.1.1|1.0.0.1|9.9.9.9|149.112.112.112"
+  tasks:
+    - name: Query over plain DNS on port 53
+      ansible.builtin.command: dig @127.0.0.1 example.com A
+      register: verify_plain
+      changed_when: false
+      # The first forwarded queries after a restart can take a few seconds.
+      until: verify_plain.stdout is search('status. NOERROR')
+      retries: 10
+      delay: 3
+
+    - name: Query over DoT (the post's test)
+      ansible.builtin.command: dig +tls @127.0.0.1 example.com
+      register: verify_tls
+      changed_when: false
+
+    - name: Resolve names through the DoT forwarders
+      ansible.builtin.command: "dig @127.0.0.1 {{ item }} A"
+      register: verify_forwarded
+      changed_when: false
+      loop:
+        - isc.org
+        - wikipedia.org
+        - debian.org
+        - quad9.net
+        - opendns.com
+        - cloudflare.com
+
+    - name: Check which ports named listens on
+      ansible.builtin.command: ss -tlnp
+      register: verify_ss
+      changed_when: false
+
+    - name: List TCP connections to upstream port 853
+      ansible.builtin.command: ss -tn state established '( dport = :853 )'
+      register: verify_upstream
+      changed_when: false
+
+    - name: Read the named journal for TLS verification failures
+      ansible.builtin.command: journalctl -u named --no-pager
+      register: verify_journal
+      changed_when: false
+
+    - name: Check the results
+      ansible.builtin.assert:
+        that:
+          - verify_plain.stdout is search('status. NOERROR')
+          - verify_tls.stdout is search('status. NOERROR')
+          - verify_tls.stdout is search('#853.*\(TLS\)')
+          - verify_forwarded.results | map(attribute='stdout') | select('search', 'status. NOERROR') | list | length == 6
+          - verify_ss.stdout is search('127.0.0.1:53 .*named')
+          - verify_ss.stdout is search('127.0.0.1:853 .*named')
+          - verify_upstream.stdout is search('(' ~ verify_upstreams ~ '):853')
+          - verify_journal.stdout is not search('verification failed')

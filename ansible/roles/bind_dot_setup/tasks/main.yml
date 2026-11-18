@@ -1,0 +1,70 @@
+---
+- name: Check the supported platform
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - bind_install_version is version('9.20', '>=')
+    fail_msg: "This role automates the Linux (Debian/Ubuntu) variant and needs BIND 9.20+ for DoT forwarding (installed: {{ bind_install_version }})"
+    quiet: true
+
+- name: Install the Python cryptography library for the certificate tasks
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Create the TLS directory
+  ansible.builtin.file:
+    path: "{{ bind_dot_setup_tls_dir }}"
+    state: directory
+    owner: root
+    group: "{{ bind_install_group }}"
+    mode: "0750"
+
+- name: Create the self-signed certificate
+  ansible.builtin.include_tasks: selfsigned.yml
+  when: bind_dot_setup_cert_source == 'selfsigned'
+
+- name: Copy the certificate
+  ansible.builtin.copy:
+    src: "{{ bind_dot_setup_cert_file }}"
+    dest: "{{ bind_dot_setup_cert_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: bind_dot_setup_cert_source == 'files'
+  notify: Restart named
+
+- name: Copy the private key
+  ansible.builtin.copy:
+    src: "{{ bind_dot_setup_key_file }}"
+    dest: "{{ bind_dot_setup_key_path }}"
+    owner: "{{ bind_install_user }}"
+    group: "{{ bind_install_group }}"
+    mode: "0600"
+  no_log: true
+  when: bind_dot_setup_cert_source == 'files'
+  notify: Restart named
+
+- name: Create the TLS configuration file
+  ansible.builtin.template:
+    src: tls_certs.j2
+    dest: "{{ bind_dot_setup_tls_file }}"
+    owner: root
+    group: "{{ bind_install_group }}"
+    mode: "0640"
+  notify: Restart named
+
+- name: Configure the DoT listener and the DoT forwarders
+  ansible.builtin.template:
+    src: named.conf.options.j2
+    dest: "{{ bind_install_options_conf }}"
+    owner: root
+    group: "{{ bind_install_group }}"
+    mode: "0640"
+    validate: named-checkconf %s
+  notify: Restart named
+
+- name: Start named
+  ansible.builtin.service:
+    name: "{{ bind_install_service }}"
+    state: started

@@ -1,0 +1,6 @@
+---
+- name: BIND with DNS over TLS and DoT forwarding
+  hosts: dot_servers
+  roles:
+    - role: bind_install
+    - role: bind_dot_setup

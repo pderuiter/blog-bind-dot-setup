@@ -1,0 +1,6 @@
+// {{ bind_dot_setup_tls_file }}
+// {{ ansible_managed }}
+tls {{ bind_dot_setup_tls_name }} {
+    cert-file "{{ bind_dot_setup_cert_path }}";
+    key-file "{{ bind_dot_setup_key_path }}";
+};

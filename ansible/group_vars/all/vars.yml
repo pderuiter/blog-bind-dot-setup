@@ -1,0 +1,14 @@
+---
+# Forwarding over TLS needs BIND 9.20, Ubuntu 24.04 ships 9.18: use the ISC packages.
+bind_install_source: isc
+bind_install_min_version: "9.20"
+
+# Name in the self-signed certificate.
+bind_dot_setup_server_name: example.com
+
+# Networks (or addresses) BIND listens on for plain DNS (53) and DoT (853).
+bind_dot_setup_listen_v4:
+  - 127.0.0.1
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16

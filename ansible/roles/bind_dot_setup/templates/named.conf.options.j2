@@ -1,0 +1,35 @@
+// {{ bind_install_options_conf }}
+// {{ ansible_managed }}
+
+include "{{ bind_dot_setup_tls_file }}";
+{% for u in bind_dot_setup_upstreams %}
+
+tls {{ u.name }} {
+    ca-file "{{ bind_dot_setup_ca_file }}";
+    remote-hostname "{{ u.hostname }}";
+};
+{% endfor %}
+
+options {
+    directory "{{ bind_install_data_dir }}";
+
+    // Plain DNS on port 53
+    listen-on              { {% for a in bind_dot_setup_listen_v4 %}{{ a }}; {% endfor %}};
+    listen-on-v6           { {% for a in bind_dot_setup_listen_v6 %}{{ a }}; {% endfor %}};
+
+    // DNS over TLS on port 853
+    listen-on    tls {{ bind_dot_setup_tls_name }}  { {% for a in bind_dot_setup_listen_v4 %}{{ a }}; {% endfor %}};
+    listen-on-v6 tls {{ bind_dot_setup_tls_name }}  { {% for a in bind_dot_setup_listen_v6 %}{{ a }}; {% endfor %}};
+{% if bind_dot_setup_forward | length > 0 %}
+
+    forward {{ bind_dot_setup_forward }};
+{% endif %}
+
+    forwarders {
+{% for u in bind_dot_setup_upstreams %}
+{% for a in u.addresses %}
+        {{ a }} port 853 tls {{ u.name }};
+{% endfor %}
+{% endfor %}
+    };
+};

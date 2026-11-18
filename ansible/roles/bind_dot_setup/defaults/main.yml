@@ -1,0 +1,48 @@
+---
+# selfsigned: generate the key and certificate on the server (testing).
+# files:      copy bind_dot_setup_cert_file / bind_dot_setup_key_file from the controller.
+bind_dot_setup_cert_source: selfsigned
+bind_dot_setup_cert_file: ""
+bind_dot_setup_key_file: ""
+bind_dot_setup_server_name: example.com
+bind_dot_setup_cert_days: 365
+
+# The post (OpenBSD) uses /etc/ssl/example.com.fullchain.pem and /etc/ssl/private/example.com.key.
+# On Ubuntu the named AppArmor profile only allows reads below /etc/bind, and /etc/ssl/private is
+# root-only, so the Linux variant keeps both files in /etc/bind/tls (the post's Linux note).
+bind_dot_setup_tls_dir: "{{ bind_install_conf_dir }}/tls"
+bind_dot_setup_cert_path: "{{ bind_dot_setup_tls_dir }}/example.com.fullchain.pem"
+bind_dot_setup_key_path: "{{ bind_dot_setup_tls_dir }}/example.com.key"
+bind_dot_setup_tls_name: wbyc
+bind_dot_setup_tls_file: "{{ bind_install_conf_dir }}/tls_certs"
+
+bind_dot_setup_listen_v4:
+  - 127.0.0.1
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+bind_dot_setup_listen_v6:
+  - any
+
+# System CA bundle (Debian/Ubuntu path); the providers chain to different roots.
+bind_dot_setup_ca_file: /etc/ssl/certs/ca-certificates.crt
+
+bind_dot_setup_upstreams:
+  - name: OpenDNS-DoT
+    hostname: dns.opendns.com
+    addresses:
+      - 208.67.222.222
+      - 208.67.220.220
+  - name: Cloudflare-DoT
+    hostname: cloudflare-dns.com
+    addresses:
+      - 1.1.1.1
+      - 1.0.0.1
+  - name: Quad9-DoT
+    hostname: dns.quad9.net
+    addresses:
+      - 9.9.9.9
+      - 149.112.112.112
+
+# "" leaves BIND's default (forward first); set to "only" to never fall back to recursion.
+bind_dot_setup_forward: ""

@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: bind_dot_setup
+  author: Patrick de Ruiter
+  description: BIND DoT listener and per-provider DoT forwarders (BIND 9.20)
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies: []

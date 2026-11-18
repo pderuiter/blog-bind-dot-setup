@@ -1,0 +1,31 @@
+---
+- name: Generate the private key
+  community.crypto.openssl_privatekey:
+    path: "{{ bind_dot_setup_key_path }}"
+    type: RSA
+    size: 4096
+    owner: "{{ bind_install_user }}"
+    group: "{{ bind_install_group }}"
+    mode: "0600"
+  notify: Restart named
+
+- name: Generate the certificate signing request
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ bind_dot_setup_key_path }}"
+    common_name: "{{ bind_dot_setup_server_name }}"
+    subject_alt_name:
+      - "DNS:{{ bind_dot_setup_server_name }}"
+  register: bind_dot_setup_csr
+  changed_when: false
+
+- name: Self-sign the certificate
+  community.crypto.x509_certificate:
+    path: "{{ bind_dot_setup_cert_path }}"
+    csr_content: "{{ bind_dot_setup_csr.csr }}"
+    privatekey_path: "{{ bind_dot_setup_key_path }}"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ bind_dot_setup_cert_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart named
