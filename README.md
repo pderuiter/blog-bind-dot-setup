@@ -11,6 +11,8 @@ The post was written for BIND on OpenBSD. This repository automates the Linux va
   `listen-on tls wbyc`, IPv4 and IPv6)
 - one `forwarders` statement with a `tls` name per server: OpenDNS, Cloudflare and Quad9 over port 853,
   verified against the system CA bundle and each provider's certificate name
+- `forward only`, so named never falls back to its own recursion: without it, BIND still sends
+  plaintext root priming queries on port 53 next to the DoT forwarding
 - a self-signed certificate for `example.com` (or your own certificate and key)
 
 ### Differences from the OpenBSD post
@@ -65,7 +67,7 @@ Without Terraform, copy `ansible/inventory.example.yml` to `ansible/inventory.ym
 | `bind_dot_setup_server_name` | `example.com` | Name in the self-signed certificate |
 | `bind_dot_setup_upstreams` | OpenDNS, Cloudflare, Quad9 | DoT forwarders: `tls` name, `remote-hostname` and addresses |
 | `bind_dot_setup_ca_file` | `/etc/ssl/certs/ca-certificates.crt` | CA bundle for the upstream certificates |
-| `bind_dot_setup_forward` | `""` | Empty keeps BIND's default (`forward first`); `only` never falls back to recursion |
+| `bind_dot_setup_forward` | `only` | Never fall back to recursion, so no query leaves in plaintext; `""` gives BIND's default (`forward first`), which still sends plaintext root priming queries on port 53 |
 | `bind_install_source` | `isc` | ISC packages, needed for BIND 9.20 |
 
 ## Layout

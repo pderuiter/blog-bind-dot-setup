@@ -44,5 +44,6 @@ bind_dot_setup_upstreams:
       - 9.9.9.9
       - 149.112.112.112
 
-# "" leaves BIND's default (forward first); set to "only" to never fall back to recursion.
-bind_dot_setup_forward: ""
+# "only": never fall back to recursion. With BIND's default (forward first, set "" to get it)
+# named still sends plaintext root priming queries on port 53, which defeats DoT forwarding.
+bind_dot_setup_forward: only
